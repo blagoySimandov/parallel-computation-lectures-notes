@@ -16,7 +16,7 @@ int MPI_Sort_direct(int n, double *a, int root, MPI_Comm comm);
 
 int main(int argc, char *argv[]) {
   int rank, size;
-  int n = 1000, i, j, k, x, q, l, shell, pair, *nr;
+  int n = 100000, i, j, k, x, q, l, shell, pair, *nr;
   double m = 10.0;
   double *array = (double *)calloc(n, sizeof(double));
   // Init + rank + size
@@ -31,7 +31,19 @@ int main(int argc, char *argv[]) {
     }
   }
   // call and time evaluate MPI_Sort_direct
+  double time1 = MPI_Wtime();
+
   MPI_Sort_direct(n, array, 0, MPI_COMM_WORLD);
+  double time2 = MPI_Wtime();
+  double elapsed = time2 - time1;
+  double overallTime;
+  MPI_Reduce(&elapsed, &overallTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  printf("Time taken by MPI_Sort_direct by processor %d is %f\n", rank,
+         elapsed);
+
+  if (rank == 0) {
+    printf("Overall time taken by MPI_Sort_direct is %f\n", overallTime);
+  }
 
   MPI_Finalize();
 }
@@ -47,7 +59,8 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
   if (rc != 0) {
     return rc;
   }
-  bubble_sort(n / size, localArray);
+  // bubble_sort(n / size, localArray);
+  merge_sort(n / size, localArray);
   rc = MPI_Gather(localArray, n / size, MPI_DOUBLE, array, n / size, MPI_DOUBLE,
                   root, comm);
 
@@ -64,10 +77,10 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
       free(tmp);
     }
 
-    for (int i = 0; i < n; i++) {
-      printf("%f ", array[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < n; i++) {
+    //   printf("%f ", array[i]);
+    // }
+    // printf("\n");
   }
   return MPI_SUCCESS;
 }

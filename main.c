@@ -27,18 +27,17 @@ int main(int argc, char *argv[]) {
   // local data  for rank
   srand(rank + (unsigned int)time(NULL));
   int tag1 = 1;
-  int tag2 = 2;
   int move1 = rand() % 3;
   int move2;
-  int winner;
+  int winner = 1;
   MPI_Status status;
   if (rank == 0) {
     MPI_Send(&move1, 1, MPI_INT, 1, tag1, MPI_COMM_WORLD);
-    MPI_Recv(&move1, 1, MPI_INT, 1, tag2, MPI_COMM_WORLD, &status);
+    MPI_Recv(&move1, 1, MPI_INT, 1, tag1, MPI_COMM_WORLD, &status);
     winner = test(move1, move2);
   } else if (rank == 1) {
     MPI_Recv(&move1, 1, MPI_INT, 0, tag1, MPI_COMM_WORLD, &status);
-    MPI_Send(&move1, 1, MPI_INT, 0, tag2, MPI_COMM_WORLD);
+    MPI_Send(&move1, 1, MPI_INT, 0, tag1, MPI_COMM_WORLD);
     winner = test(move2, move1);
   }
   printf("RPS Game on %d processor %d is winner \n", rank, winner);
