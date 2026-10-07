@@ -1,6 +1,6 @@
 CC     = mpicc
 CFLAGS = -Wall -O2
-NP     = 8
+NP     = 4
 
 .PHONY: all run clean remote
 

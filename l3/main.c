@@ -9,10 +9,23 @@ void print_matrix(int n, int m, int **a);
 // matrix operations
 int **prod_matrix(int n, int l, int m, int **a, int **b);
 int **trans_matrix(int n, int m, int **a);
+
+int **pseudo_prod_matrix(int n, int l, int m, int **a, int **b) {
+  int i, j, k, **c;
+  c = alloc_matrix(n, m);
+  for (i = 0; i < n; i++)
+    for (j = 0; j < m; j++) {
+      c[i][j] = 0;
+      for (k = 0; k < l; k++) {
+        c[i][j] = c[i][j] + a[i][k] * b[j][k];
+      }
+    }
+  return c;
+}
 // MPI functions
 int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm);
 int main(int argc, char **argv) {
-  int size, rank, tag = 1, i, j, n = 20, **a, **b, **c;
+  int size, rank, tag = 1, i, j, n = 2000, **a, **b, **c;
   double time;
   MPI_Status stat;
   MPI_Datatype rowtype;
@@ -35,12 +48,12 @@ int main(int argc, char **argv) {
   printf("Processor %d worked for %lf\n\n", rank, time);
   if (rank == 0) {
     // initialise the matrices
-    printf("Matrix a:\n\n");
-    print_matrix(n, n, a);
-    printf("Matrix b:\n\n");
-    print_matrix(n, n, b);
-    printf("Matrix c:\n\n");
-    print_matrix(n, n, c);
+    // printf("Matrix a:\n\n");
+    // print_matrix(n, n, a);
+    // printf("Matrix b:\n\n");
+    // print_matrix(n, n, b);
+    // printf("Matrix c:\n\n");
+    // print_matrix(n, n, c);
   }
   MPI_Type_free(&rowtype);
   MPI_Finalize();
@@ -66,6 +79,40 @@ int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm) {
   // calculate local_c = local_a * b
   time = MPI_Wtime();
   local_c = prod_matrix(n / size, n, n, local_a, b);
+  compT = MPI_Wtime() - time;
+  // gather local_c
+  MPI_Gather(local_c[0], n * n / size, MPI_INT, c[0], n * n / size, MPI_INT,
+             root, comm);
+  MPI_Reduce(rank == root ? MPI_IN_PLACE : &commT, &commT, 1, MPI_DOUBLE,
+             MPI_MAX, root, comm);
+  MPI_Reduce(rank == root ? MPI_IN_PLACE : &compT, &compT, 1, MPI_DOUBLE,
+             MPI_MAX, root, comm);
+  printf("Processor %d worked for communication %lf and computation %lf\n\n",
+         rank, commT, compT);
+  return MPI_SUCCESS;
+}
+
+int MPI_Prod_matrix2(int n, int **a, int **b, int **c, int root,
+                     MPI_Comm comm) {
+  // get rank and size of comm
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  double commT, compT, time;
+  time = MPI_Wtime();
+
+  // alocate space for local_a and local_c
+  int **local_a = alloc_matrix(n / size, n);
+  int **local_c = alloc_matrix(n / size, n);
+  // scatter a to local_a and bcast b
+  commT = MPI_Wtime() - time;
+  MPI_Scatter(a[0], n * n / size, MPI_INT, local_a[0], n * n / size, MPI_INT,
+              root, comm);
+  MPI_Bcast(b[0], n * n, MPI_INT, root, comm);
+
+  // calculate local_c = local_a * b
+  time = MPI_Wtime();
+  local_c = pseudo_prod_matrix(n / size, n, n, local_a, b);
   compT = MPI_Wtime() - time;
   // gather local_c
   MPI_Gather(local_c[0], n * n / size, MPI_INT, c[0], n * n / size, MPI_INT,
@@ -189,6 +236,7 @@ int **prod_matrix(int n, int l, int m, int **a, int **b) {
     }
   return c;
 }
+
 int **trans_matrix(int n, int m, int **a) {
   int i, j;
   int **b;
