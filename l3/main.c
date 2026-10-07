@@ -10,6 +10,14 @@ void print_matrix(int n, int m, int **a);
 int **prod_matrix(int n, int l, int m, int **a, int **b);
 int **trans_matrix(int n, int m, int **a);
 
+int **unit_matrix(int n, int m, int **a) {
+  int i, j;
+  for (i = 0; i < n; i++)
+    for (j = 0; j < m; j++)
+      a[i][j] = 1;
+  return a;
+}
+
 int **pseudo_prod_matrix(int n, int l, int m, int **a, int **b) {
   int i, j, k, **c;
   c = alloc_matrix(n, m);
@@ -40,7 +48,7 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     // initialise the matrices
     init_matrix(n, n, a);
-    init_matrix(n, n, b);
+    unit_matrix(n, n, b);
   }
   time = MPI_Wtime();
   MPI_Prod_matrix(n, a, b, c, 0, MPI_COMM_WORLD);
