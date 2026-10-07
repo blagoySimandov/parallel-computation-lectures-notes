@@ -64,9 +64,13 @@ int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm) {
   // calculate local_c = local_a * b
   time = MPI_Wtime();
   local_c = prod_matrix(n / size, n, n, local_a, b);
+  compT = time - MPI_Wtime();
   // gather local_c
   MPI_Gather(local_c[0], n * n / size, MPI_INT, c[0], n * n / size, MPI_INT,
              root, comm);
+  MPI_Reduce(&commT, &commT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+  MPI_Reduce(&compT, &compT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+  printf("Processor %d worked for %lf\n\n", rank, time);
   return MPI_SUCCESS;
 }
 
