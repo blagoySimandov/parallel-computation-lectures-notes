@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
   MPI_Type_free(&rowtype);
   MPI_Finalize();
 }
+
 int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm) {
   // get rank and size of comm
   int rank, size;
@@ -70,7 +71,8 @@ int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm) {
              root, comm);
   MPI_Reduce(&commT, &commT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
   MPI_Reduce(&compT, &compT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
-  printf("Processor %d worked for %lf\n\n", rank, time);
+  printf("Processor %d worked for communication %lf and computation %lf\n\n",
+         rank, commT, compT);
   return MPI_SUCCESS;
 }
 
@@ -80,9 +82,13 @@ int MPI_Prod_matrix1(int n, int **a, int **b, int **c, int root,
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   // alocate space for local_a and local_c
+  // timings
+  double commT, compT, time;
   int **local_a = alloc_matrix(n / size, n);
   int **local_c = alloc_matrix(n / size, n);
   MPI_Datatype rowtype;
+
+  time = MPI_Wtime();
   MPI_Type_contiguous(n / size, MPI_INT, &rowtype);
   MPI_Type_commit(&rowtype);
   // scatter a to local_a and bcast b
@@ -90,11 +96,21 @@ int MPI_Prod_matrix1(int n, int **a, int **b, int **c, int root,
               comm);
   MPI_Bcast(b[0], n, rowtype, root, comm);
 
+  commT = time - MPI_Wtime();
+
   // calculate local_c = local_a * b
+  time = MPI_Wtime();
   local_c = prod_matrix(n / size, n, n, local_a, b);
+  compT = time - MPI_Wtime();
+
   // gather local_c
   MPI_Gather(local_c[0], n / size, rowtype, c[0], n / size, rowtype, root,
              comm);
+  MPI_Reduce(&commT, &commT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+  MPI_Reduce(&compT, &compT, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
+  printf("Processor %d worked for communication %lf and computation %lf\n\n",
+         rank, commT, compT);
+
   return MPI_SUCCESS;
 }
 /*
