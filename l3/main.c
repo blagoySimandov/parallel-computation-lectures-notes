@@ -79,10 +79,11 @@ int MPI_Prod_matrix(int n, int **a, int **b, int **c, int root, MPI_Comm comm) {
   int **local_a = alloc_matrix(n / size, n);
   int **local_c = alloc_matrix(n / size, n);
   // scatter a to local_a and bcast b
-  commT = MPI_Wtime() - time;
   MPI_Scatter(a[0], n * n / size, MPI_INT, local_a[0], n * n / size, MPI_INT,
               root, comm);
   MPI_Bcast(b[0], n * n, MPI_INT, root, comm);
+
+  commT = MPI_Wtime() - time;
 
   // calculate local_c = local_a * b
   time = MPI_Wtime();
