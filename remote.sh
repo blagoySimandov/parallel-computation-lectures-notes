@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
-REMOTE_DIR="CS4402/$(basename "$LOCAL_DIR")"
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCAL_DIR="$(pwd -P)"
+REMOTE_ROOT="CS4402"
+REMOTE_DIR="$REMOTE_ROOT/$(basename "$LOCAL_DIR")"
 MPI_HOME='$HOME/opt/openmpi'
 MAX_HOSTS="${MAX_HOSTS:-8}"
 
@@ -31,8 +33,9 @@ EOF
 sync() {
   local head="$1"
   ssh "$head" "mkdir -p $REMOTE_DIR"
-  rsync -az --delete --exclude main --exclude '*.o' --exclude machines \
-    --exclude .clangd "$LOCAL_DIR/" "$head:$REMOTE_DIR/"
+  rsync -az "$ROOT_DIR/common.mk" "$head:$REMOTE_ROOT/"
+  rsync -az --delete --exclude bin --exclude '*.o' --exclude machines \
+    "$LOCAL_DIR/" "$head:$REMOTE_DIR/"
 }
 
 run() {
@@ -42,9 +45,9 @@ run() {
   echo "hosts: $(tr '\n' ' ' <<<"$hosts")" >&2
   sync "$head"
   ssh -t "$head" "cd $REMOTE_DIR && printf '%s\n' $(tr '\n' ' ' <<<"$hosts") > machines \
-    && export PATH=$MPI_HOME/bin:\$PATH && make -s $prog \
+    && export PATH=$MPI_HOME/bin:\$PATH && make -s bin/$prog \
     && mpirun --prefix $MPI_HOME -np $np --hostfile machines --map-by node \
-       --oversubscribe ./$prog" 2> >(grep -v setlocale >&2)
+       --oversubscribe ./bin/$prog" 2> >(grep -v setlocale >&2)
 }
 
 case "${1:-}" in

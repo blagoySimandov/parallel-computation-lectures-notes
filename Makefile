@@ -1,25 +1,17 @@
-CC     = mpicc
-CFLAGS = -Wall -O2
-NP     = 8
+LABS := $(patsubst %/Makefile,%,$(filter-out template/Makefile,$(wildcard */Makefile)))
 
-.PHONY: all run clean remote
+.PHONY: new all clean list
 
-all: main
+new:
+	@test -n "$(L)" || { echo "usage: make new L=<dir>" >&2; exit 1; }
+	@test ! -e "$(L)" || { echo "$(L) already exists" >&2; exit 1; }
+	cp -R template "$(L)"
 
-main: main.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-sort: sort.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-run: main
-	mpirun -n $(NP) ./main
-
-runsort: sort
-	mpirun -n $(NP) ./sort
+all:
+	@for d in $(LABS); do $(MAKE) -C $$d all || exit 1; done
 
 clean:
-	rm -f main
+	@for d in $(LABS); do $(MAKE) -C $$d clean; done
 
-remote:
-	./remote.sh run $(NP)
+list:
+	@for d in $(LABS); do printf '%s: ' $$d; $(MAKE) -s -C $$d list; done
