@@ -6,6 +6,7 @@
 #include <time.h>
 int MPI_Odd_even(int n, double *a, int root, MPI_Comm comm);
 int MPI_Exchange(int n, double *a, int rank1, int rank2, MPI_Comm comm);
+int MPI_Shell_sort(int n, double *a, int root, MPI_Comm comm);
 
 // helpers
 double *createarray(int rank, int n) {
@@ -111,13 +112,19 @@ int main(int argc, char **argv) {
   double *array = createarray(rank, n);
 
   // timing the sorts
-  double MPI_Odd_even_time =
-      timefunc(MPI_Odd_even, n, array, 0, MPI_COMM_WORLD);
+  // double MPI_Odd_even_time =
+  //     timefunc(MPI_Odd_even, n, array, 0, MPI_COMM_WORLD);
+
+  double MPI_Shell_sort_time =
+      timefunc(MPI_Shell_sort, n, array, 0, MPI_COMM_WORLD);
 
   // results
   if (rank == 0)
+    // printf("sorted %d values on %d procs in %f s\n", n, size,
+    //        MPI_Odd_even_time);
+
     printf("sorted %d values on %d procs in %f s\n", n, size,
-           MPI_Odd_even_time);
+           MPI_Shell_sort_time);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -161,7 +168,24 @@ int MPI_Shell_sort(int n, double *a, int root, MPI_Comm comm) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   double *localArray = calloc(n / size, sizeof(double));
   // each proceessor gets an array to insert sort on its own
-  MPI_Scatter(a, n, MPI_DOUBLE, localArray, n / size, MPI_DOUBLE, root, comm);
+  //
+  MPI_Scatter(a, n / size, MPI_DOUBLE, localArray, n / size, MPI_DOUBLE, root,
+              comm);
+  // Start with a large gap, then reduce it step by step
+  for (int gap = size / 2; gap > 0; gap /= 2) {
+    // Perform a "gapped" insertion sort for this gap size
+    for (int i = 0; i < size - gap; i++) {
+      int low = rank + i;
+      int high = rank + i + gap;
+      MPI_Exchange(n / size, localArray, low, high, comm);
+    }
 
-  return MPI_SUCCESS;
+    // for (int i = gap; i < n; i++) {
+    //   MPI_Exchange(n / size, localArray, i - gap, i, comm);
+    // }
+  }
+
+  MPI_Gather(localArray, n / size, MPI_DOUBLE, a, n / size, MPI_DOUBLE, root,
+             comm);
+  return MPI_Odd_even(n, a, root, comm);
 }
