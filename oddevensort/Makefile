@@ -1,2 +1,2 @@
-NP = 4
+NP = 8
 include ../common.mk

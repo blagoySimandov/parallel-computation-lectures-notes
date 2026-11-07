@@ -164,28 +164,43 @@ int MPI_Odd_even(int n, double *a, int root, MPI_Comm comm) {
 
 int MPI_Shell_sort(int n, double *a, int root, MPI_Comm comm) {
   int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  double *localArray = calloc(n / size, sizeof(double));
-  // each proceessor gets an array to insert sort on its own
-  //
-  MPI_Scatter(a, n / size, MPI_DOUBLE, localArray, n / size, MPI_DOUBLE, root,
-              comm);
-  // Start with a large gap, then reduce it step by step
-  for (int gap = size / 2; gap > 0; gap /= 2) {
-    // Perform a "gapped" insertion sort for this gap size
-    for (int i = 0; i < size - gap; i++) {
-      int low = rank + i;
-      int high = rank + i + gap;
-      MPI_Exchange(n / size, localArray, low, high, comm);
-    }
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  int local_n = n / size;
+  double *localArray = calloc(local_n, sizeof(double));
 
-    // for (int i = gap; i < n; i++) {
-    //   MPI_Exchange(n / size, localArray, i - gap, i, comm);
-    // }
+  // each processor gets a block and sorts it on its own
+  MPI_Scatter(a, local_n, MPI_DOUBLE, localArray, local_n, MPI_DOUBLE, root,
+              comm);
+  merge_sort(local_n, localArray);
+
+  // Shell phase: start with the whole range as one group, halve each round,
+  // and compare-split with my mirror inside my group
+  for (int gap = size; gap > 1; gap /= 2) {
+    int offset = rank % gap;                  // my position in the group
+    int start = rank - offset;                // first rank of my group
+    int partner = start + (gap - 1 - offset); // mirror from the other end
+
+    if (partner != rank && partner < size) {
+      int low = rank < partner ? rank : partner;
+      int high = rank < partner ? partner : rank;
+      MPI_Exchange(local_n, localArray, low, high, comm);
+    }
   }
 
-  MPI_Gather(localArray, n / size, MPI_DOUBLE, a, n / size, MPI_DOUBLE, root,
+  // Odd-even phase: finish off on the blocks we already hold
+  for (int i = 0; i < size; i++) {
+    int partner = (i % 2 == rank % 2) ? rank + 1 : rank - 1;
+
+    if (partner >= 0 && partner < size) {
+      int low = rank < partner ? rank : partner;
+      int high = rank < partner ? partner : rank;
+      MPI_Exchange(local_n, localArray, low, high, comm);
+    }
+  }
+
+  MPI_Gather(localArray, local_n, MPI_DOUBLE, a, local_n, MPI_DOUBLE, root,
              comm);
-  return MPI_Odd_even(n, a, root, comm);
+  free(localArray);
+  return MPI_SUCCESS;
 }

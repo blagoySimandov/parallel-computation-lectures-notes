@@ -155,6 +155,7 @@ double *merge_array(int n, double *a, int m, double *b) {
       c[k++] = a[i++];
   return c;
 }
+
 // function to merge sort the array a with n elements
 void merge_sort(int n, double *a) {
   double *c;
