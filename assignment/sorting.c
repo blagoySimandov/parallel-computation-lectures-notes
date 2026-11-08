@@ -13,6 +13,10 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
                                MPI_Comm comm);
 int GetbucketIndex(double x, double max, int size);
 
+static double comm_time = 0.0;
+
+void comm_end(double start) { comm_time += MPI_Wtime() - start; }
+
 double *generate_array(int n, int max) {
   double *array = (double *)calloc(n, sizeof(double));
   for (int i = 0; i < n; i++) {
@@ -52,9 +56,15 @@ int main(int argc, char **argv) {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   double end_time = MPI_Wtime();
-  if (rank == root)
-    printf("Time taken: %f seconds\n Algorithm used: %s\n",
-           end_time - start_time, argv[1]);
+  double max_comm;
+  MPI_Reduce(&comm_time, &max_comm, 1, MPI_DOUBLE, MPI_MAX, root,
+             MPI_COMM_WORLD);
+  if (rank == root) {
+    double total = end_time - start_time;
+    printf("Time taken: %f seconds\n Algorithm used: %s\n", total, argv[1]);
+    printf("Comm time: %f seconds\nComp time: %f seconds\n", max_comm,
+           total - max_comm);
+  }
 
   if (rank == root && argc > 2 && strcmp(argv[2], "print") == 0)
     print_array(n, array); // used for debugging
@@ -137,8 +147,10 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
   // allocate space as much as we are sending
   double *localArray = (double *)calloc(sendcount[rank], sizeof(double));
 
+  double t = MPI_Wtime();
   int rc = MPI_Scatterv(array, sendcount, displs, MPI_DOUBLE, localArray,
                         sendcount[rank], MPI_DOUBLE, root, comm);
+  comm_end(t);
   if (rc != 0) {
     free(localArray);
     free(sendcount);
@@ -150,8 +162,10 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
 
   // i send sendcount[rank] while root receives sendcount(array) elements with
   // different displs
+  t = MPI_Wtime();
   rc = MPI_Gatherv(localArray, sendcount[rank], MPI_DOUBLE, array, sendcount,
                    displs, MPI_DOUBLE, root, comm);
+  comm_end(t);
 
   // sort localArray
   // gather localArray to array with double elements
@@ -182,7 +196,9 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   // bcast a
+  double t = MPI_Wtime();
   MPI_Bcast(a, n, MPI_DOUBLE, root, comm);
+  comm_end(t);
   // collect a's elements to processor ranks bucket
   double *bucket = (double *)calloc(n, sizeof(double));
   int count = 0;
@@ -195,15 +211,19 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   // gatherv  bucket
   int *recvcounts = (int *)calloc(size, sizeof(int));
   int *displs = (int *)calloc(size, sizeof(int));
+  t = MPI_Wtime();
   MPI_Gather(&count, 1, MPI_INT, recvcounts, 1, MPI_INT, root, comm);
+  comm_end(t);
 
   if (rank == root) {
     displs[0] = 0;
     for (int i = 1; i < size; i++)
       displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
+  t = MPI_Wtime();
   MPI_Gatherv(bucket, count, MPI_DOUBLE, a, recvcounts, displs, MPI_DOUBLE,
               root, comm);
+  comm_end(t);
   free(bucket);
   free(recvcounts);
   free(displs);
@@ -221,8 +241,10 @@ int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
   // allocate space
   double *locala = (double *)calloc(n / size, sizeof(double));
   // scater
+  double t = MPI_Wtime();
   MPI_Scatter(a, n / size, MPI_DOUBLE, locala, n / size, MPI_DOUBLE, root,
               comm);
+  comm_end(t);
   // sort
   merge_sort(n / size, locala);
   for (int i = 0; i < size; i++) {
@@ -241,7 +263,9 @@ int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
       break;
     }
   }
+  t = MPI_Wtime();
   MPI_Gather(locala, n / size, MPI_DOUBLE, a, n / size, MPI_DOUBLE, root, comm);
+  comm_end(t);
   free(locala);
   return MPI_SUCCESS;
 }
@@ -254,8 +278,10 @@ int MPI_Exchange(int n, double *a, int rank1, int rank2, MPI_Comm comm) {
   double *b = (double *)malloc(n * sizeof(double));
 
   // swap blocks with the partner
+  double t = MPI_Wtime();
   MPI_Sendrecv(a, n, MPI_DOUBLE, partner, 0, b, n, MPI_DOUBLE, partner, 0, comm,
                MPI_STATUS_IGNORE);
+  comm_end(t);
 
   // merge both sorted blocks into 2n sorted values
   double *c = merge_array(n, a, n, b);
@@ -292,8 +318,10 @@ int MPI_Issorted(int n, double *array, int root, MPI_Comm comm) {
     firsts = (double *)calloc(size, sizeof(double));
     lasts = (double *)calloc(size, sizeof(double));
   }
+  double t = MPI_Wtime();
   MPI_Gather(&array[0], 1, MPI_DOUBLE, firsts, 1, MPI_DOUBLE, root, comm);
   MPI_Gather(&array[n - 1], 1, MPI_DOUBLE, lasts, 1, MPI_DOUBLE, root, comm);
+  comm_end(t);
 
   // 3. root checks the boundaries between neighbouring blocks
   if (rank == root) {
@@ -309,7 +337,9 @@ int MPI_Issorted(int n, double *array, int root, MPI_Comm comm) {
 
   // 4. combine everyone's answer and give the result to all ranks
   int global;
+  t = MPI_Wtime();
   MPI_Allreduce(&answer, &global, 1, MPI_INT, MPI_LAND, comm);
+  comm_end(t);
   return global;
 }
 
@@ -334,8 +364,10 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   int localN = sendcount[rank];
   double *localArray = (double *)calloc(localN, sizeof(double));
 
+  double t = MPI_Wtime();
   MPI_Scatterv(a, sendcount, displs, MPI_DOUBLE, localArray, localN, MPI_DOUBLE,
                root, comm);
+  comm_end(t);
 
   // merge_sort(localN, localArray);
   //
@@ -357,9 +389,10 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
 
   int *bucketRecvs = (int *)calloc(size, sizeof(int));
 
-  MPI_Alltoall(bucketCounts, 1, MPI_INT, bucketRecvs, 1, MPI_INT,
-               comm); // send bucketCounts to everybody so they know how many
-                      // items to recv
+  t = MPI_Wtime();
+  MPI_Alltoall(bucketCounts, 1, MPI_INT, bucketRecvs, 1, MPI_INT, comm);
+  comm_end(t); // send bucketCounts to everybody so they know how many
+               // items to recv
   int *recvDispls = (int *)calloc(size, sizeof(int));
   for (int i = 0; i < size; i++) {
     if (i == 0) {
@@ -381,8 +414,10 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
     filled[b]++;
   }
 
+  t = MPI_Wtime();
   MPI_Alltoallv(sendBuf, bucketCounts, bucketSendDispls, MPI_DOUBLE, bucket,
                 bucketRecvs, recvDispls, MPI_DOUBLE, comm);
+  comm_end(t);
 
   // Sort local bucket
   merge_sort(bucketN, bucket);
@@ -390,7 +425,9 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   // Gather all to root.
   // First see how big is each bucket
   int *count = (int *)calloc(size, sizeof(int));
+  t = MPI_Wtime();
   MPI_Gather(&bucketN, 1, MPI_INT, count, 1, MPI_INT, root, comm);
+  comm_end(t);
 
   if (rank == root) {
     displs[0] = 0;
@@ -399,8 +436,10 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
     }
   }
 
+  t = MPI_Wtime();
   MPI_Gatherv(bucket, bucketN, MPI_DOUBLE, a, count, displs, MPI_DOUBLE, root,
               comm);
+  comm_end(t);
   free(sendcount);
   free(displs);
   free(localArray);

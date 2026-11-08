@@ -2,17 +2,9 @@ import polars as pl
 
 from .data import ALGORITHMS
 
-SHORT_LABELS = {
-    "direct": "Direct",
-    "bucket": "Bucket",
-    "all-to-all": "All-to-All",
-    "odd-even": "Odd-Even",
-}
 ALGORITHM_COLUMNS = {
     "np": ("NP", "{:d}"),
     "median_s": ("Median (s)", "{:.3f}"),
-    "min_s": ("Min (s)", "{:.3f}"),
-    "max_s": ("Max (s)", "{:.3f}"),
     "speedup": ("Speedup", "{:.2f}"),
     "efficiency": ("Efficiency", "{:.2f}"),
 }
@@ -41,20 +33,5 @@ def algorithm_table(summary: pl.DataFrame, algorithm: str) -> str:
     return tabular(header, rows)
 
 
-def comparison_table(summary: pl.DataFrame, value: str, fmt: str) -> str:
-    wide = summary.pivot(on="algorithm", index="np", values=value).sort("np")
-    header = ["NP", *(SHORT_LABELS[a] for a in ALGORITHMS)]
-    rows = [
-        [str(row["np"]), *(fmt.format(row[a]) for a in ALGORITHMS)]
-        for row in wide.iter_rows(named=True)
-    ]
-    return tabular(header, rows)
-
-
 def all_tables(summary: pl.DataFrame) -> dict[str, str]:
-    tables = {f"{a}-scaling": algorithm_table(summary, a) for a in ALGORITHMS}
-    return tables | {
-        "comparison-time": comparison_table(summary, "median_s", "{:.3f}"),
-        "comparison-speedup": comparison_table(summary, "speedup", "{:.2f}"),
-        "comparison-efficiency": comparison_table(summary, "efficiency", "{:.2f}"),
-    }
+    return {f"{a}-scaling": algorithm_table(summary, a) for a in ALGORITHMS}

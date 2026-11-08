@@ -9,7 +9,9 @@ For each algorithm we will compare its perfomance when parallerized against a si
 At the very end we wil also compare the algorithms side by side.
 
 All provided images and graphs were generated from running the experiments and loading them into the python libraries polars and altair.
-For more details around the graph generation code check out the github repo \url{https://github.com/blagoySimandov/parallel-computation-lectures-notes}
+For more details around the graph generation code check out the github repo:
+
+\url{https://github.com/blagoySimandov/parallel-computation-lectures-notes}
 And more specifically the `assignment` folder.
 
 For the sake of consistency and correctness all benchmarks were run 5 times and the median time was used.
@@ -17,68 +19,53 @@ The average was not used due to concerns that outliers might skew the results.
 
 \subsection{Direct Sort}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\linewidth]{direct-scaling.pdf}
-  \caption{Direct Sort: median time and speedup for NP = 1, 2, 4 and 8.}
-  \label{fig:direct-scaling}
-\end{figure}
-
 \begin{table}[H]
   \centering
   \small
   \input{tables/direct-scaling}
-  \caption{Direct Sort: results of 5 runs for $n = 10^7$.}
+  \caption{Direct Sort: median of 5 runs for $n = 10^7$.}
   \label{tab:direct-scaling}
 \end{table}
 
-\subsection{Bucket Sort}
+The speedup is only 2.80 at NP = 8.
+The communication time stays below 0.015\,s, thus the serial merge on the root limits the speedup.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\linewidth]{bucket-scaling.pdf}
-  \caption{Bucket Sort: median time and speedup for NP = 1, 2, 4 and 8.}
-  \label{fig:bucket-scaling}
-\end{figure}
+\subsection{Bucket Sort}
 
 \begin{table}[H]
   \centering
   \small
   \input{tables/bucket-scaling}
-  \caption{Bucket Sort: results of 5 runs for $n = 10^7$.}
+  \caption{Bucket Sort: median of 5 runs for $n = 10^7$.}
   \label{tab:bucket-scaling}
 \end{table}
 
-\subsection{All-to-All Bucket Sort}
+The speedup is bigger than direct sort sittin at 5.41 when using NP = 8.
+Each process receives the full array and reads all $n$ elements, and this amount of work does not decrease when NP increases.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\linewidth]{all-to-all-scaling.pdf}
-  \caption{All-to-All Bucket Sort: median time and speedup for NP = 1, 2, 4 and 8.}
-  \label{fig:all-to-all-scaling}
-\end{figure}
+\subsection{All-to-All Bucket Sort}
 
 \begin{table}[H]
   \centering
   \small
   \input{tables/all-to-all-scaling}
-  \caption{All-to-All Bucket Sort: results of 5 runs for $n = 10^7$.}
+  \caption{All-to-All Bucket Sort: median of 5 runs for $n = 10^7$.}
   \label{tab:all-to-all-scaling}
 \end{table}
 
-\subsection{Odd-Even Transposition Sort}
+This algorithm has the best speedup, 6.35 at NP = 8.
+Each process sorts only about $n/\mathrm{size}$ elements, and the root does not need to do the sequential merge.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\linewidth]{odd-even-scaling.pdf}
-  \caption{Odd-Even Transposition Sort: median time and speedup for NP = 1, 2, 4 and 8.}
-  \label{fig:odd-even-scaling}
-\end{figure}
+\subsection{Odd-Even Transposition Sort}
 
 \begin{table}[H]
   \centering
   \small
   \input{tables/odd-even-scaling}
-  \caption{Odd-Even Transposition Sort: results of 5 runs for $n = 10^7$.}
+  \caption{Odd-Even Transposition Sort: median of 5 runs for $n = 10^7$.}
   \label{tab:odd-even-scaling}
 \end{table}
+
+The speedup is 4.58 at NP = 8.
+The communication time increases from 0.006\,s to 0.040\,s, because the algorithm needs more exchange phases at a higher NPs.
+This is the heaviest algorithm in terms of communication time. This can later be observed in the bar chart at Figure \ref{fig:time-breakdown}.

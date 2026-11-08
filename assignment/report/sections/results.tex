@@ -19,40 +19,21 @@
   \label{fig:comparison}
 \end{figure}
 
-\begin{table}[H]
-  \centering
-  \small
-  \setlength{\tabcolsep}{3pt}
-  \begin{subtable}[t]{0.49\linewidth}
-    \centering
-    \input{tables/comparison-time}
-    \caption{Median run time (s).}
-    \label{tab:comparison-time}
-  \end{subtable}
-  \hfill
-  \begin{subtable}[t]{0.49\linewidth}
-    \centering
-    \input{tables/comparison-speedup}
-    \caption{Speedup.}
-    \label{tab:comparison-speedup}
-  \end{subtable}
-  \caption{Run time and speedup of all algorithms for $n = 10^7$.}
-  \label{tab:comparison}
-\end{table}
+All-to-All Bucket Sort is the fastest algorithm at NP = 2, 4 and 8.
+Direct Sort is the slowest algorithm at NP = 8, and its speedup curve is almost flat after NP = 4.
 
-\noindent
-\begin{minipage}[c]{0.52\linewidth}
+\subsection{Time Breakdown}
+
+The communication time is the time in MPI calls.
+The communication time includes the time that a rank waits for the other ranks.
+The computation time is the total time minus the communication time.
+
+\begin{figure}[H]
   \centering
-  \includegraphics[width=\linewidth]{comparison-efficiency.pdf}
-  \captionof{figure}{Parallel efficiency (speedup divided by NP).}
-  \label{fig:comparison-efficiency}
-\end{minipage}
-\hfill
-\begin{minipage}[c]{0.45\linewidth}
-  \centering
-  \small
-  \setlength{\tabcolsep}{3pt}
-  \input{tables/comparison-efficiency}
-  \captionof{table}{Parallel efficiency.}
-  \label{tab:comparison-efficiency}
-\end{minipage}
+  \includegraphics[width=\linewidth]{time-breakdown.pdf}
+  \caption{Median communication time and computation time for $n = 10^7$.}
+  \label{fig:time-breakdown}
+\end{figure}
+
+At NP = 8, the communication time is 5\,\% of the total time for Direct Sort and 23\,\% for Odd-Even Sort.
+All the processes run on one machine, thus MPI communication is a memory copy, and on a cluster it takes more time.

@@ -26,6 +26,8 @@ def medians(runs: pl.DataFrame) -> pl.DataFrame:
         median_s=pl.col("time_s").median(),
         min_s=pl.col("time_s").min(),
         max_s=pl.col("time_s").max(),
+        comm_s=pl.col("comm_s").median(),
+        comp_s=pl.col("comp_s").median(),
     )
 
 

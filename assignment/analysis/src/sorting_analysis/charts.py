@@ -26,62 +26,60 @@ def ideal_speedup() -> alt.Chart:
     )
 
 
-def time_layer(summary: pl.DataFrame, color: alt.Color | dict) -> alt.Chart:
+def time_chart(summary: pl.DataFrame) -> alt.Chart:
     base = alt.Chart(summary).encode(x=X_NP)
     line = base.mark_line(point=True).encode(
-        y=alt.Y("median_s:Q", title="Median time (s)"), color=color
+        y=alt.Y("median_s:Q", title="Median time (s)"), color=COLOR
     )
     band = base.mark_errorbar(ticks=True).encode(
-        y=alt.Y("min_s:Q", title="Median time (s)"), y2="max_s:Q", color=color
+        y=alt.Y("min_s:Q", title="Median time (s)"), y2="max_s:Q", color=COLOR
     )
     return (line + band).properties(width=WIDTH, height=HEIGHT)
 
 
-def speedup_layer(summary: pl.DataFrame, color: alt.Color | dict) -> alt.Chart:
+def speedup_chart(summary: pl.DataFrame) -> alt.Chart:
     line = (
         alt.Chart(summary)
         .mark_line(point=True)
-        .encode(x=X_NP, y=alt.Y("speedup:Q", title="Speedup (T1 / Tp)"), color=color)
+        .encode(x=X_NP, y=alt.Y("speedup:Q", title="Speedup (T1 / Tp)"), color=COLOR)
     )
     return (ideal_speedup() + line).properties(width=WIDTH, height=HEIGHT)
 
 
-def efficiency_layer(summary: pl.DataFrame) -> alt.Chart:
-    return (
-        alt.Chart(summary)
-        .mark_line(point=True)
-        .encode(
-            x=X_NP,
-            y=alt.Y("efficiency:Q", title="Efficiency (speedup / NP)",
-                    scale=alt.Scale(domain=[0, 1.05])),
-            color=COLOR,
+def breakdown_chart(summary: pl.DataFrame) -> alt.Chart:
+    long = summary.unpivot(
+        on=["comm_s", "comp_s"], index=["label", "np"], variable_name="part"
+    ).with_columns(
+        pl.col("part").replace_strict(
+            {"comm_s": "Communication", "comp_s": "Computation"}
         )
-        .properties(width=WIDTH, height=HEIGHT)
     )
-
-
-def algorithm_chart(summary: pl.DataFrame, algorithm: str) -> alt.Chart:
-    subset = summary.filter(pl.col("algorithm") == algorithm)
-    color = alt.value("#4c78a8")
-    return alt.hconcat(
-        time_layer(subset, color).properties(title="Median time"),
-        speedup_layer(subset, color).properties(title="Speedup"),
-    ).properties(title=LABELS[algorithm])
+    return (
+        alt.Chart(long)
+        .mark_bar()
+        .encode(
+            x=alt.X("np:O", title="Processes (NP)", axis=alt.Axis(labelAngle=0)),
+            y=alt.Y("value:Q", title="Median time (s)"),
+            color=alt.Color("part:N", title=None),
+            order=alt.Order("part:N", sort="descending"),
+        )
+        .properties(width=140, height=160)
+        .facet(
+            facet=alt.Facet("label:N", title=None,
+                            sort=[LABELS[a] for a in ALGORITHMS]),
+            columns=4,
+        )
+        .configure_legend(orient="bottom")
+    )
 
 
 def legend_below(chart: alt.Chart) -> alt.Chart:
     return chart.configure_legend(orient="bottom", columns=2, title=None)
 
 
-def comparison_charts(summary: pl.DataFrame) -> dict[str, alt.Chart]:
-    charts = {
-        "comparison-time": time_layer(summary, COLOR),
-        "comparison-speedup": speedup_layer(summary, COLOR),
-        "comparison-efficiency": efficiency_layer(summary),
-    }
-    return {name: legend_below(chart) for name, chart in charts.items()}
-
-
 def all_charts(summary: pl.DataFrame) -> dict[str, alt.Chart]:
-    charts = {f"{a}-scaling": algorithm_chart(summary, a) for a in ALGORITHMS}
-    return charts | comparison_charts(summary)
+    return {
+        "comparison-time": legend_below(time_chart(summary)),
+        "comparison-speedup": legend_below(speedup_chart(summary)),
+        "time-breakdown": breakdown_chart(summary),
+    }
