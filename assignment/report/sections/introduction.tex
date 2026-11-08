@@ -1,0 +1,22 @@
+\section{Introduction}
+
+This report compares four parallel sorting algorithms implemented with MPI.
+All speedup measurements were run locally on a single machine with the
+specifications shown in Table~\ref{tab:machine-specs}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Benchmark machine specifications}
+    \label{tab:machine-specs}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Component} & \textbf{Specification} \\
+        \midrule
+        Machine          & MacBook Pro 14-inch (2024) \\
+        SoC              & Apple M4 Pro \\
+        CPU cores        & 12 (8 performance + 4 efficiency) \\
+        Memory           & 24\,GB LPDDR5X unified memory \\
+        Memory bandwidth & 273\,GB/s \\
+        \bottomrule
+    \end{tabular}
+\end{table}

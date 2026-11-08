@@ -1,0 +1,34 @@
+\section{Results}
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{r S S S S}
+    \toprule
+    {Processes} & {Direct (\si{\second})} & {Bucket (\si{\second})} &
+    {All-to-All (\si{\second})} & {Odd-Even (\si{\second})} \\
+    \midrule
+    1 & 0 & 0 & 0 & 0 \\
+    2 & 0 & 0 & 0 & 0 \\
+    4 & 0 & 0 & 0 & 0 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Run time for $n = 10^6$.}
+  \label{tab:times}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      xlabel={Processes},
+      ylabel={Speedup},
+      legend pos=north west,
+      grid=major,
+    ]
+      \addplot coordinates {(1,1) (2,1) (4,1)};
+      \addlegendentry{Direct}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Speedup against the number of processes.}
+  \label{fig:speedup}
+\end{figure}
