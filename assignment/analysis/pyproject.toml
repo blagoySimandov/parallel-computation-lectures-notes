@@ -1,0 +1,20 @@
+[project]
+name = "sorting-analysis"
+version = "0.1.0"
+description = "Plots for the MPI sorting benchmarks"
+authors = [
+    { name = "blagoySimandov", email = "baggy.simandoff@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "altair>=6.3.0",
+    "polars>=2.1.0",
+    "vl-convert-python>=1.9.0.post1",
+]
+
+[project.scripts]
+sorting-analysis = "sorting_analysis:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

@@ -1,34 +1,43 @@
 \section{Results}
 
-\begin{table}[h]
+\begin{figure}[H]
   \centering
-  \begin{tabular}{r S S S S}
-    \toprule
-    {Processes} & {Direct (\si{\second})} & {Bucket (\si{\second})} &
-    {All-to-All (\si{\second})} & {Odd-Even (\si{\second})} \\
-    \midrule
-    1 & 0 & 0 & 0 & 0 \\
-    2 & 0 & 0 & 0 & 0 \\
-    4 & 0 & 0 & 0 & 0 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Run time for $n = 10^6$.}
-  \label{tab:times}
+  \includegraphics[width=0.85\linewidth]{comparison-time.pdf}
+  \caption{Median run time of all algorithms. The error bars show the minimum and the maximum of the 5 runs.}
+  \label{fig:comparison-time}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/comparison-time}
+  \caption{Median run time in seconds of 5 runs for $n = 10^7$.}
+  \label{tab:comparison-time}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      xlabel={Processes},
-      ylabel={Speedup},
-      legend pos=north west,
-      grid=major,
-    ]
-      \addplot coordinates {(1,1) (2,1) (4,1)};
-      \addlegendentry{Direct}
-    \end{axis}
-  \end{tikzpicture}
-  \caption{Speedup against the number of processes.}
-  \label{fig:speedup}
+  \includegraphics[width=0.85\linewidth]{comparison-speedup.pdf}
+  \caption{Speedup of all algorithms. The dashed line shows the ideal speedup.}
+  \label{fig:comparison-speedup}
 \end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/comparison-speedup}
+  \caption{Speedup of all algorithms.}
+  \label{tab:comparison-speedup}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{comparison-efficiency.pdf}
+  \caption{Parallel efficiency (speedup divided by NP) of all algorithms.}
+  \label{fig:comparison-efficiency}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/comparison-efficiency}
+  \caption{Parallel efficiency of all algorithms.}
+  \label{tab:comparison-efficiency}
+\end{table}

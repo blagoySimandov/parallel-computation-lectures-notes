@@ -8,7 +8,7 @@ The selected optional one is All-to-All Bucket Sort.
 For each algorithm we will compare its perfomance when parallerized agains a single thread implementation (running the algorithm with NP=1)
 At the very end we wil also compare the algorithms side by side.
 
-All provided images and graphs were generated from running the experiments and loading them into polars and seaborn.
+All provided images and graphs were generated from running the experiments and loading them into polars and Altair.
 For more details around the graph generation code check out the github repo \url{https://github.com/blagoySimandov/parallel-computation-lectures-notes}
 And more specifically the `assignment` folder.
 
@@ -17,8 +17,64 @@ The average was not used due to concerns that outliers might skew the results.
 
 \subsection{Direct Sort}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{direct-scaling.pdf}
+  \caption{Direct Sort: median time and speedup for NP = 1, 2, 4 and 8.}
+  \label{fig:direct-scaling}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/direct-scaling}
+  \caption{Direct Sort: results of 5 runs for $n = 10^7$.}
+  \label{tab:direct-scaling}
+\end{table}
+
 \subsection{Bucket Sort}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{bucket-scaling.pdf}
+  \caption{Bucket Sort: median time and speedup for NP = 1, 2, 4 and 8.}
+  \label{fig:bucket-scaling}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/bucket-scaling}
+  \caption{Bucket Sort: results of 5 runs for $n = 10^7$.}
+  \label{tab:bucket-scaling}
+\end{table}
 
 \subsection{All-to-All Bucket Sort}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{all-to-all-scaling.pdf}
+  \caption{All-to-All Bucket Sort: median time and speedup for NP = 1, 2, 4 and 8.}
+  \label{fig:all-to-all-scaling}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/all-to-all-scaling}
+  \caption{All-to-All Bucket Sort: results of 5 runs for $n = 10^7$.}
+  \label{tab:all-to-all-scaling}
+\end{table}
+
 \subsection{Odd-Even Transposition Sort}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{odd-even-scaling.pdf}
+  \caption{Odd-Even Transposition Sort: median time and speedup for NP = 1, 2, 4 and 8.}
+  \label{fig:odd-even-scaling}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/odd-even-scaling}
+  \caption{Odd-Even Transposition Sort: results of 5 runs for $n = 10^7$.}
+  \label{tab:odd-even-scaling}
+\end{table}
