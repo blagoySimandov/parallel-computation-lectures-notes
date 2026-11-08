@@ -1,15 +1,17 @@
-NP = 4
-
 CC     = mpicc
 CFLAGS = -Wall -O2
 NP    ?= 4
 P     ?= sorting
-ROOT  := $(dir $(lastword $(MAKEFILE_LIST)))
+ALGO  ?= direct
+PRINT ?=
+
+ALGOS := direct bucket all-to-all odd-even
+ARGS   = $(ALGO) $(if $(PRINT),print)
 
 SRCS  := $(wildcard *.c)
 PROGS := $(SRCS:%.c=bin/%)
 
-.PHONY: all run clean list remote run-% remote-%
+.PHONY: all run clean list run-% $(ALGOS) bench
 
 all: $(PROGS)
 
@@ -24,12 +26,16 @@ bin:
 run: run-$(P)
 
 run-%: bin/%
-	mpirun -n $(NP) ./bin/$*
+	mpirun -n $(NP) ./bin/$* $(ARGS)
 
-remote: remote-$(P)
+$(ALGOS):
+	$(MAKE) --no-print-directory run ALGO=$@
 
-remote-%:
-	$(ROOT)remote.sh run $(NP) $*
+bench: bin/$(P)
+	@for a in $(ALGOS); do \
+	  echo "== $$a NP=$(NP)"; \
+	  mpirun -n $(NP) ./bin/$(P) $$a; \
+	done
 
 list:
 	@echo $(SRCS:%.c=%)

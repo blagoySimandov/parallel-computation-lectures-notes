@@ -23,17 +23,40 @@ double *generate_array(int n, int max) {
 int main(int argc, char **argv) {
   int rank, size;
   int root = 0;
-  int n = 1000;
+  int n = 10000000;
   double max = 10.0; // max possible value to be present in the generated array
   double *array = generate_array(n, max);
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
-  // MPI_Sort_direct(n, array, root, MPI_COMM_WORLD);
-  // MPI_Sort_odd_even(n, array, root, MPI_COMM_WORLD);
-  MPI_Sort_all_to_all_bucket(n, array, max, root, MPI_COMM_WORLD);
+
+  // start timing for the algorithms
+  double start_time = MPI_Wtime();
+
+  // based on argc and argv run the correct sorting algorithm
+  // options are "bucket" "direct" "all-to-all" and "odd-even"
+  if (argc > 1) {
+    if (strcmp(argv[1], "bucket") == 0) {
+      MPI_Sort_bucket(n, array, max, root, MPI_COMM_WORLD);
+    } else if (strcmp(argv[1], "direct") == 0) {
+      MPI_Sort_direct(n, array, root, MPI_COMM_WORLD);
+    } else if (strcmp(argv[1], "all-to-all") == 0) {
+      MPI_Sort_all_to_all_bucket(n, array, max, root, MPI_COMM_WORLD);
+    } else if (strcmp(argv[1], "odd-even") == 0) {
+      MPI_Sort_odd_even(n, array, root, MPI_COMM_WORLD);
+    }
+  } else {
+    // default to direct sort
+    MPI_Sort_direct(n, array, root, MPI_COMM_WORLD);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  double end_time = MPI_Wtime();
   if (rank == root)
-    print_array(n, array);
+    printf("Time taken: %f seconds\n Algorithm used: %s\n",
+           end_time - start_time, argv[1]);
+
+  if (rank == root && argc > 2 && strcmp(argv[2], "print") == 0)
+    print_array(n, array); // used for debugging
 
   free(array);
   MPI_Finalize();
@@ -316,7 +339,7 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   MPI_Scatterv(a, sendcount, displs, MPI_DOUBLE, localArray, localN, MPI_DOUBLE,
                root, comm);
 
-  merge_sort(localN, localArray);
+  // merge_sort(localN, localArray);
 
   // Put each block into  at most size smaller buckets and do all to all
   // communication
@@ -335,6 +358,7 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
     else
       bucketSendDispls[i] = bucketSendDispls[i - 1] + bucketCounts[i - 1];
   }
+
   int *bucketRecvs = (int *)calloc(size, sizeof(int));
   MPI_Alltoall(bucketCounts, 1, MPI_INT, bucketRecvs, 1, MPI_INT,
                comm); // send bucketCounts to everybody so they know how many
