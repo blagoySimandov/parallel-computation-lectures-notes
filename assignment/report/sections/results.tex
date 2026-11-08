@@ -28,6 +28,10 @@ The communication time is the time in MPI calls.
 The communication time includes the time that a rank waits for the other ranks.
 The computation time is the total time minus the communication time.
 
+Some overheads are shared by all the algorithms.
+Every algorithm has to scatter the input from the root and gather the result back, and part of the communication time is really just processes waiting for the slowest one to catch up.
+The \texttt{merge\_sort} function also allocates a temporary buffer at every merge, which adds a small cost to every run.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{time-breakdown.pdf}

@@ -41,7 +41,7 @@ def speedup_chart(summary: pl.DataFrame) -> alt.Chart:
     line = (
         alt.Chart(summary)
         .mark_line(point=True)
-        .encode(x=X_NP, y=alt.Y("speedup:Q", title="Speedup (T1 / Tp)"), color=COLOR)
+        .encode(x=X_NP, y=alt.Y("speedup:Q", title="Speedup (T1 / TNP)"), color=COLOR)
     )
     return (ideal_speedup() + line).properties(width=WIDTH, height=HEIGHT)
 
@@ -63,11 +63,11 @@ def breakdown_chart(summary: pl.DataFrame) -> alt.Chart:
             color=alt.Color("part:N", title=None),
             order=alt.Order("part:N", sort="descending"),
         )
-        .properties(width=140, height=160)
+        .properties(width=120, height=160)
         .facet(
             facet=alt.Facet("label:N", title=None,
                             sort=[LABELS[a] for a in ALGORITHMS]),
-            columns=4,
+            columns=len(ALGORITHMS),
         )
         .configure_legend(orient="bottom")
     )

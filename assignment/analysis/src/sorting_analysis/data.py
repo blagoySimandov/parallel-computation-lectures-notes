@@ -8,12 +8,13 @@ SUMMARY = ROOT / "data" / "summary.csv"
 FIGURES = ROOT.parent / "report" / "figures"
 TABLES = ROOT.parent / "report" / "tables"
 
-ALGORITHMS = ["direct", "bucket", "all-to-all", "odd-even"]
+ALGORITHMS = ["direct", "bucket", "all-to-all", "odd-even", "shell"]
 LABELS = {
     "direct": "Direct",
     "bucket": "Bucket",
     "all-to-all": "All-to-All Bucket",
     "odd-even": "Odd-Even",
+    "shell": "Shell",
 }
 
 

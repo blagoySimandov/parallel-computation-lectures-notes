@@ -1,9 +1,9 @@
 \section{Algorithms}
 
-The four selected algorithms are \textbf{Direct Sort}, \textbf{Bucket Sort}, \textbf{All-to-All Bucket Sort}, and \textbf{Odd-Even Transposition Sort}.
+The five selected algorithms are \textbf{Direct Sort}, \textbf{Bucket Sort}, \textbf{All-to-All Bucket Sort}, \textbf{Odd-Even Sort}, and \textbf{Shell Sort}.
 
 Direct Sort, Bucket Sort and Odd-Even Sort were all ``mandatory'' for the assignment.
-The selected optional one is All-to-All Bucket Sort.
+The selected optional ones are All-to-All Bucket Sort and Shell Sort.
 
 For each algorithm we will compare its performance when parallelized against the same program with NP = 1.
 At the very end we will also compare the algorithms side by side.
@@ -16,6 +16,9 @@ And more specifically the \texttt{assignment} folder.
 
 For the sake of consistency and correctness all benchmarks were run 5 times and the median time was used.
 The average was not used due to concerns that outliers might skew the results.
+
+The input is an array of $10^7$ random double values between 0 and 10, which the program makes with \texttt{rand()}.
+Thus, the values have a uniform distribution.
 
 The speedup is $T_1 / T_\mathrm{NP}$, where $T_\mathrm{NP}$ is the median time with NP processes.
 The tables give the median of each column separately.
@@ -33,6 +36,7 @@ Thus, the communication time plus the computation time can be a few milliseconds
 
 The speedup is only 2.80 at NP = 8.
 The communication time is a maximum of 0.015\,s, thus the serial merge on the root limits the speedup.
+The main overhead here is that final merge: while the root merges the chunks one by one, every other process just sits idle, and the merge gets longer as NP grows.
 
 \subsection{Bucket Sort}
 
@@ -46,6 +50,7 @@ The communication time is a maximum of 0.015\,s, thus the serial merge on the ro
 
 The speedup is 5.41 at NP = 8, which is higher than Direct Sort.
 Each process receives the full array and reads all $n$ elements, and this amount of work does not decrease when NP increases.
+So the main overhead is the broadcast itself plus every process scanning the whole array just to pick out its own bucket, which is a lot of duplicated work.
 
 \subsection{All-to-All Bucket Sort}
 
@@ -59,17 +64,36 @@ Each process receives the full array and reads all $n$ elements, and this amount
 
 This algorithm has the best speedup, 6.35 at NP = 8.
 Each process sorts only about $n/\mathrm{NP}$ elements, and the root does not need to do the sequential merge.
+The price for this is an extra communication round: one \texttt{MPI\_Alltoall} to share the bucket sizes and one \texttt{MPI\_Alltoallv} to move the data.
+That is why its communication time grows to 0.027\,s at NP = 8, but the time it saves on computation more than makes up for it.
 
-\subsection{Odd-Even Transposition Sort}
+\subsection{Odd-Even Sort}
 
 \begin{table}[H]
   \centering
   \small
   \input{tables/odd-even-scaling}
-  \caption{Odd-Even Transposition Sort: median of 5 runs for $n = 10^7$.}
+  \caption{Odd-Even Sort: median of 5 runs for $n = 10^7$.}
   \label{tab:odd-even-scaling}
 \end{table}
 
 The speedup is 4.58 at NP = 8.
 The communication time increases from 0.006\,s to 0.040\,s, because the algorithm needs more exchange phases at a higher NP.
 This is the heaviest algorithm in terms of communication time. This can later be observed in the bar chart at Figure~\ref{fig:time-breakdown}.
+On top of the exchanges, it runs a global sorted check after every phase (two gathers and an allreduce), which forces all processes to sync up each time.
+The merge work per process also does not shrink: each phase merges $2n/\mathrm{NP}$ elements and there are about NP phases.
+
+\subsection{Shell Sort}
+
+\begin{table}[H]
+  \centering
+  \small
+  \input{tables/shell-scaling}
+  \caption{Shell Sort: median of 5 runs for $n = 10^7$.}
+  \label{tab:shell-scaling}
+\end{table}
+
+The speedup is 5.16 at NP = 8, which is higher than Odd-Even Sort.
+Shell Sort is faster because its first phase moves elements between ranks that are far apart, thus the data is almost sorted before the odd-even phase starts.
+At NP = 8, Shell Sort needs 3 first-phase steps and 2 odd-even phases, but Odd-Even Sort needs 7 odd-even phases, and each phase also does a global sort check to check for early termination.
+Its only extra overhead is the $\log_2(\mathrm{NP})$ exchanges in the first phase, and these pay off because they save more odd-even phases and sorted checks than they cost.

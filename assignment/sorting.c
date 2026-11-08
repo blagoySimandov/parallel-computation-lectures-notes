@@ -12,6 +12,7 @@ int MPI_Issorted(int n, double *array, int root, MPI_Comm comm);
 int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
                                MPI_Comm comm);
 int GetbucketIndex(double x, double max, int size);
+int MPI_Sort_shell(int n, double *a, int root, MPI_Comm comm);
 
 static double comm_time = 0.0;
 
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
   double start_time = MPI_Wtime();
 
   // based on argc and argv run the correct sorting algorithm
-  // options are "bucket" "direct" "all-to-all" and "odd-even"
+  // options are "bucket" "direct" "all-to-all" "odd-even" and "shell"
   if (argc > 1) {
     if (strcmp(argv[1], "bucket") == 0) {
       MPI_Sort_bucket(n, array, max, root, MPI_COMM_WORLD);
@@ -49,6 +50,8 @@ int main(int argc, char **argv) {
       MPI_Sort_all_to_all_bucket(n, array, max, root, MPI_COMM_WORLD);
     } else if (strcmp(argv[1], "odd-even") == 0) {
       MPI_Sort_odd_even(n, array, root, MPI_COMM_WORLD);
+    } else if (strcmp(argv[1], "shell") == 0) {
+      MPI_Sort_shell(n, array, root, MPI_COMM_WORLD);
     }
   } else {
     // default to direct sort
@@ -234,6 +237,24 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
 // For all other cases the function will drop the last elements
 // For the sake of this experiment this will be fine since we are using n
 // divisble by size.
+void odd_even_phases(int localN, double *locala, int rank, int size,
+                     MPI_Comm comm) {
+  for (int i = 0; i < size; i++) {
+    if ((i + rank) % 2 == 0) {
+      if (rank + 1 < size)
+        MPI_Exchange(localN, locala, rank, rank + 1, comm);
+    } else {
+      if (rank > 0)
+        MPI_Exchange(localN, locala, rank - 1, rank, comm);
+    }
+    // we don't need the barrier for the correctness
+    // Sendrecv will block correctly even if ranks drift apart.
+    // check sort and stop early
+    if (MPI_Issorted(localN, locala, 0, comm))
+      break;
+  }
+}
+
 int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -247,22 +268,7 @@ int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
   comm_end(t);
   // sort
   merge_sort(n / size, locala);
-  for (int i = 0; i < size; i++) {
-    if ((i + rank) % 2 == 0) {
-      if (rank + 1 < size)
-        MPI_Exchange(n / size, locala, rank, rank + 1, comm);
-    } else {
-      if (rank > 0)
-        MPI_Exchange(n / size, locala, rank - 1, rank, comm);
-    }
-    // we don't need the barrier for the correctness
-    // Sendrecv will block correctly even if ranks drift apart.
-    // MPI_Barrier(comm);
-    // check sort and stop early
-    if (MPI_Issorted(n / size, locala, 0, comm)) {
-      break;
-    }
-  }
+  odd_even_phases(n / size, locala, rank, size, comm);
   t = MPI_Wtime();
   MPI_Gather(locala, n / size, MPI_DOUBLE, a, n / size, MPI_DOUBLE, root, comm);
   comm_end(t);
@@ -458,4 +464,39 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
 int GetbucketIndex(double x, double max, int size) {
   int bIndex = (int)(x * size / max);
   return bIndex < size ? bIndex : size - 1; // clamp when x == max
+}
+
+// first phase: compare-split ranks that are far apart, in halving groups
+void shell_hypercube_phase(int localN, double *locala, int rank, int size,
+                           MPI_Comm comm) {
+  for (int group = size; group > 1; group /= 2) {
+    int base = rank / group * group;
+    int partner = base + group - 1 - (rank - base);
+    if (partner >= size || partner == rank)
+      continue;
+    if (rank < partner)
+      MPI_Exchange(localN, locala, rank, partner, comm);
+    else
+      MPI_Exchange(localN, locala, partner, rank, comm);
+  }
+}
+
+// MPI_Sort_shell, like MPI_Sort_odd_even, needs n % size == 0
+int MPI_Sort_shell(int n, double *a, int root, MPI_Comm comm) {
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+  int localN = n / size;
+  double *locala = (double *)malloc(localN * sizeof(double));
+  double t = MPI_Wtime();
+  MPI_Scatter(a, localN, MPI_DOUBLE, locala, localN, MPI_DOUBLE, root, comm);
+  comm_end(t);
+  merge_sort(localN, locala);
+  shell_hypercube_phase(localN, locala, rank, size, comm);
+  odd_even_phases(localN, locala, rank, size, comm);
+  t = MPI_Wtime();
+  MPI_Gather(locala, localN, MPI_DOUBLE, a, localN, MPI_DOUBLE, root, comm);
+  comm_end(t);
+  free(locala);
+  return MPI_SUCCESS;
 }

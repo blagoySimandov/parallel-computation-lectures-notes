@@ -1,13 +1,14 @@
 \section{Conclusion}
 
 All-to-All Bucket Sort gave the best result, with a speedup of 6.35 at NP = 8.
-Bucket Sort was second with 5.41, and Odd-Even Transposition Sort was third with 4.58.
+Bucket Sort was second with 5.41, Shell Sort was third with 5.16, and Odd-Even Sort was fourth with 4.58.
 Direct Sort gave the lowest speedup, 2.80, because the root merges all the chunks in series.
 
 The results show that the best algorithms divide the computation equally and keep the serial part small.
 All-to-All Bucket Sort does this, because each process sorts only its own bucket and the root does not merge.
-Odd-Even Transposition Sort divides the computation equally, but each exchange phase merges two blocks.
-These merges and the communication time both increase with NP.
+Odd-Even Sort divides the computation equally, but each exchange phase merges two blocks.
+The merge work per process does not shrink as NP grows, and the communication time goes up.
+Shell Sort uses the same exchange, but its first phase moves the data far, thus it is faster than Odd-Even Sort.
 
 
 This experiment had two limits.
