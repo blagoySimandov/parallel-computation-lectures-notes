@@ -4,7 +4,7 @@ import polars as pl
 from .data import ALGORITHMS, LABELS
 
 NP_VALUES = [1, 2, 4, 8]
-WIDTH, HEIGHT = 340, 240
+WIDTH, HEIGHT = 300, 180
 
 X_NP = alt.X(
     "np:Q",
@@ -69,12 +69,17 @@ def algorithm_chart(summary: pl.DataFrame, algorithm: str) -> alt.Chart:
     ).properties(title=LABELS[algorithm])
 
 
+def legend_below(chart: alt.Chart) -> alt.Chart:
+    return chart.configure_legend(orient="bottom", columns=2, title=None)
+
+
 def comparison_charts(summary: pl.DataFrame) -> dict[str, alt.Chart]:
-    return {
+    charts = {
         "comparison-time": time_layer(summary, COLOR),
         "comparison-speedup": speedup_layer(summary, COLOR),
         "comparison-efficiency": efficiency_layer(summary),
     }
+    return {name: legend_below(chart) for name, chart in charts.items()}
 
 
 def all_charts(summary: pl.DataFrame) -> dict[str, alt.Chart]:

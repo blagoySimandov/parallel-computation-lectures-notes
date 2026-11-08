@@ -1,7 +1,13 @@
 import polars as pl
 
-from .data import ALGORITHMS, LABELS
+from .data import ALGORITHMS
 
+SHORT_LABELS = {
+    "direct": "Direct",
+    "bucket": "Bucket",
+    "all-to-all": "All-to-All",
+    "odd-even": "Odd-Even",
+}
 ALGORITHM_COLUMNS = {
     "np": ("NP", "{:d}"),
     "median_s": ("Median (s)", "{:.3f}"),
@@ -37,7 +43,7 @@ def algorithm_table(summary: pl.DataFrame, algorithm: str) -> str:
 
 def comparison_table(summary: pl.DataFrame, value: str, fmt: str) -> str:
     wide = summary.pivot(on="algorithm", index="np", values=value).sort("np")
-    header = ["NP", *(LABELS[a] for a in ALGORITHMS)]
+    header = ["NP", *(SHORT_LABELS[a] for a in ALGORITHMS)]
     rows = [
         [str(row["np"]), *(fmt.format(row[a]) for a in ALGORITHMS)]
         for row in wide.iter_rows(named=True)
