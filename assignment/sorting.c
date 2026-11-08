@@ -189,6 +189,10 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   return MPI_SUCCESS;
 }
 
+// MPI_Sort_odd_even only really works with n%size == 0
+// For all other cases the function will drop the last elements
+// For the sake of this experiment this will be fine since we are using n
+// divisble by size.
 int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
   int rank, size;
   MPI_Comm_rank(comm, &rank);
