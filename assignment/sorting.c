@@ -11,6 +11,7 @@ int MPI_Exchange(int n, double *a, int rank1, int rank2, MPI_Comm comm);
 int MPI_Issorted(int n, double *array, int root, MPI_Comm comm);
 int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
                                MPI_Comm comm);
+int GetbucketIndex(double x, double max, int size);
 
 double *generate_array(int n, int max) {
   double *array = (double *)calloc(n, sizeof(double));
@@ -186,10 +187,7 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   double *bucket = (double *)calloc(n, sizeof(double));
   int count = 0;
   for (int i = 0; i < n; i++) {
-    int bindex = (int)(a[i] * size / max);
-    if (bindex >= size) // happens when val is equal to max
-      bindex = size - 1;
-    if (bindex == rank)
+    if (GetbucketIndex(a[i], max, size) == rank)
       bucket[count++] = a[i];
   }
   // sort bucket
@@ -340,15 +338,13 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
                root, comm);
 
   // merge_sort(localN, localArray);
+  //
 
   // Put each block into  at most size smaller buckets and do all to all
   // communication
   int *bucketCounts = (int *)calloc(size, sizeof(int));
   for (int i = 0; i < localN; i++) {
-    int bindex = (int)(localArray[i] * size / max);
-    if (bindex >= size) // happens if val == max
-      bindex = size - 1;
-    bucketCounts[bindex]++;
+    bucketCounts[GetbucketIndex(localArray[i], max, size)]++;
   }
   int *bucketSendDispls = (int *)calloc(size, sizeof(int));
 
@@ -360,6 +356,7 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   }
 
   int *bucketRecvs = (int *)calloc(size, sizeof(int));
+
   MPI_Alltoall(bucketCounts, 1, MPI_INT, bucketRecvs, 1, MPI_INT,
                comm); // send bucketCounts to everybody so they know how many
                       // items to recv
@@ -375,7 +372,16 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   // SEND each bucket's elements to the corresponding rank
   int bucketN = recvDispls[size - 1] + bucketRecvs[size - 1];
   double *bucket = (double *)calloc(bucketN, sizeof(double));
-  MPI_Alltoallv(localArray, bucketCounts, bucketSendDispls, MPI_DOUBLE, bucket,
+
+  double *sendBuf = (double *)malloc(localN * sizeof(double));
+  int *filled = (int *)calloc(size, sizeof(int));
+  for (int i = 0; i < localN; i++) {
+    int b = GetbucketIndex(localArray[i], max, size);
+    sendBuf[bucketSendDispls[b] + filled[b]] = localArray[i];
+    filled[b]++;
+  }
+
+  MPI_Alltoallv(sendBuf, bucketCounts, bucketSendDispls, MPI_DOUBLE, bucket,
                 bucketRecvs, recvDispls, MPI_DOUBLE, comm);
 
   // Sort local bucket
@@ -404,5 +410,13 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
   free(recvDispls);
   free(bucket);
   free(count);
+  free(sendBuf);
+  free(filled);
   return MPI_SUCCESS;
+}
+
+// bucet index for
+int GetbucketIndex(double x, double max, int size) {
+  int bIndex = (int)(x * size / max);
+  return bIndex < size ? bIndex : size - 1; // clamp when x == max
 }
