@@ -6,12 +6,12 @@ Direct Sort gave the lowest speedup, 2.80, because the root merges all the chunk
 
 The results show that the best algorithms divide the computation equally and keep the serial part small.
 All-to-All Bucket Sort does this, because each process sorts only its own bucket and the root does not merge.
-Odd-Even Transposition Sort divides the computation equally, but it's slower due to the heavy amount of  communication time it needs.
-And it's communication time increases with NP.
+Odd-Even Transposition Sort divides the computation equally, but each exchange phase merges two blocks.
+These merges and the communication time both increase with NP.
 
 
-This experiment had two limits/problems.
-All the processes ran on one machine, thus the communication time was shorter than one in a real world cluster.
+This experiment had two limits.
+All the processes ran on one machine, thus the communication time was shorter than on a real cluster.
 
 Due to the way the data was generated, the input data had a uniform distribution. For the two bucket sorting algorithms this meant that
 all buckets had around the same amount of data. 

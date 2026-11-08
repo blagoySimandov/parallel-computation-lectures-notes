@@ -5,8 +5,9 @@ from .data import ALGORITHMS
 ALGORITHM_COLUMNS = {
     "np": ("NP", "{:d}"),
     "median_s": ("Median (s)", "{:.3f}"),
+    "comm_s": ("Comm. (s)", "{:.3f}"),
+    "comp_s": ("Comp. (s)", "{:.3f}"),
     "speedup": ("Speedup", "{:.2f}"),
-    "efficiency": ("Efficiency", "{:.2f}"),
 }
 
 

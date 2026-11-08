@@ -2,20 +2,24 @@
 
 The four selected algorithms are \textbf{Direct Sort}, \textbf{Bucket Sort}, \textbf{All-to-All Bucket Sort}, and \textbf{Odd-Even Transposition Sort}.
 
-Direct Sort, Bucket Sort and Odd-Even Sort were all "mandatory" for the assignment and
+Direct Sort, Bucket Sort and Odd-Even Sort were all ``mandatory'' for the assignment.
 The selected optional one is All-to-All Bucket Sort.
 
-For each algorithm we will compare its perfomance when parallerized against a single thread implementation (running the algorithm with NP=1)
-At the very end we wil also compare the algorithms side by side.
+For each algorithm we will compare its performance when parallelized against the same program with NP = 1.
+At the very end we will also compare the algorithms side by side.
 
-All provided images and graphs were generated from running the experiments and loading them into the python libraries polars and altair.
-For more details around the graph generation code check out the github repo:
+All provided images and graphs were generated from running the experiments and loading them into the Python libraries polars and Altair.
+For more details around the graph generation code check out the GitHub repo:
 
 \url{https://github.com/blagoySimandov/parallel-computation-lectures-notes}
-And more specifically the `assignment` folder.
+And more specifically the \texttt{assignment} folder.
 
 For the sake of consistency and correctness all benchmarks were run 5 times and the median time was used.
 The average was not used due to concerns that outliers might skew the results.
+
+The speedup is $T_1 / T_\mathrm{NP}$, where $T_\mathrm{NP}$ is the median time with NP processes.
+The tables give the median of each column separately.
+Thus, the communication time plus the computation time can be a few milliseconds different from the median time.
 
 \subsection{Direct Sort}
 
@@ -28,7 +32,7 @@ The average was not used due to concerns that outliers might skew the results.
 \end{table}
 
 The speedup is only 2.80 at NP = 8.
-The communication time stays below 0.015\,s, thus the serial merge on the root limits the speedup.
+The communication time is a maximum of 0.015\,s, thus the serial merge on the root limits the speedup.
 
 \subsection{Bucket Sort}
 
@@ -40,7 +44,7 @@ The communication time stays below 0.015\,s, thus the serial merge on the root l
   \label{tab:bucket-scaling}
 \end{table}
 
-The speedup is bigger than direct sort sittin at 5.41 when using NP = 8.
+The speedup is 5.41 at NP = 8, which is higher than Direct Sort.
 Each process receives the full array and reads all $n$ elements, and this amount of work does not decrease when NP increases.
 
 \subsection{All-to-All Bucket Sort}
@@ -54,7 +58,7 @@ Each process receives the full array and reads all $n$ elements, and this amount
 \end{table}
 
 This algorithm has the best speedup, 6.35 at NP = 8.
-Each process sorts only about $n/\mathrm{size}$ elements, and the root does not need to do the sequential merge.
+Each process sorts only about $n/\mathrm{NP}$ elements, and the root does not need to do the sequential merge.
 
 \subsection{Odd-Even Transposition Sort}
 
@@ -67,5 +71,5 @@ Each process sorts only about $n/\mathrm{size}$ elements, and the root does not 
 \end{table}
 
 The speedup is 4.58 at NP = 8.
-The communication time increases from 0.006\,s to 0.040\,s, because the algorithm needs more exchange phases at a higher NPs.
-This is the heaviest algorithm in terms of communication time. This can later be observed in the bar chart at Figure \ref{fig:time-breakdown}.
+The communication time increases from 0.006\,s to 0.040\,s, because the algorithm needs more exchange phases at a higher NP.
+This is the heaviest algorithm in terms of communication time. This can later be observed in the bar chart at Figure~\ref{fig:time-breakdown}.

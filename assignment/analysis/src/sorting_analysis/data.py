@@ -39,7 +39,6 @@ def summarize(runs: pl.DataFrame) -> pl.DataFrame:
     return (
         stats.join(serial, on="algorithm")
         .with_columns(speedup=pl.col("serial_s") / pl.col("median_s"))
-        .with_columns(efficiency=pl.col("speedup") / pl.col("np"))
         .with_columns(label=pl.col("algorithm").replace_strict(LABELS))
         .sort(pl.col("algorithm").cast(pl.Enum(ALGORITHMS)), "np")
     )
