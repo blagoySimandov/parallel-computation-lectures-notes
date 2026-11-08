@@ -13,10 +13,8 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
                                MPI_Comm comm);
 
 double *generate_array(int n, int max) {
-  int i, j, k, x, q, l, shell, pair, *nr;
-
   double *array = (double *)calloc(n, sizeof(double));
-  for (i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
     array[i] = rand() / (double)RAND_MAX * max;
   }
   return array;
@@ -37,6 +35,7 @@ int main(int argc, char **argv) {
   if (rank == root)
     print_array(n, array);
 
+  free(array);
   MPI_Finalize();
   return 0;
 }
@@ -86,6 +85,7 @@ void merge_sort(int n, double *a) {
   c = merge_array(n / 2, a, n - n / 2, a + n / 2);
   for (i = 0; i < n; i++)
     a[i] = c[i];
+  free(c);
   return;
 }
 
@@ -114,8 +114,11 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
   double *localArray = (double *)calloc(sendcount[rank], sizeof(double));
 
   int rc = MPI_Scatterv(array, sendcount, displs, MPI_DOUBLE, localArray,
-                        n / size, MPI_DOUBLE, root, comm);
+                        sendcount[rank], MPI_DOUBLE, root, comm);
   if (rc != 0) {
+    free(localArray);
+    free(sendcount);
+    free(displs);
     return rc;
   }
   // bubble_sort(n / size, localArray);
@@ -131,11 +134,10 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
   if (rank == root) {
     // merge the size chunks of array
     // print array
-    int chunk = n / size;
     for (int i = 1; i < size; i++) {
-      // merge the sorted prefix (i chunks) with the next sorted chunk
-      double *tmp = merge_array(i * chunk, array, chunk, array + i * chunk);
-      memcpy(array, tmp, (i + 1) * chunk * sizeof(double));
+      int prefix = displs[i];
+      double *tmp = merge_array(prefix, array, sendcount[i], array + prefix);
+      memcpy(array, tmp, (prefix + sendcount[i]) * sizeof(double));
       free(tmp);
     }
 
@@ -144,6 +146,9 @@ int MPI_Sort_direct(int n, double *array, int root, MPI_Comm comm) {
     // }
     // printf("\n");
   }
+  free(localArray);
+  free(sendcount);
+  free(displs);
   return MPI_SUCCESS;
 }
 
@@ -158,13 +163,11 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   double *bucket = (double *)calloc(n, sizeof(double));
   int count = 0;
   for (int i = 0; i < n; i++) {
-    // check if a[i] is in the bucket [max/size*rank:max/size*rank+1]
-    if (a[i] >= (max / (double)size) * rank &&
-        a[i] < (max / ((double)size * rank + 1))) {
+    int bindex = (int)(a[i] * size / max);
+    if (bindex >= size) // happens when val is equal to max
+      bindex = size - 1;
+    if (bindex == rank)
       bucket[count++] = a[i];
-      //
-      //
-    }
   }
   // sort bucket
   merge_sort(count, bucket);
@@ -180,6 +183,9 @@ int MPI_Sort_bucket(int n, double *a, double max, int root, MPI_Comm comm) {
   }
   MPI_Gatherv(bucket, count, MPI_DOUBLE, a, recvcounts, displs, MPI_DOUBLE,
               root, comm);
+  free(bucket);
+  free(recvcounts);
+  free(displs);
   return MPI_SUCCESS;
 }
 
@@ -211,7 +217,7 @@ int MPI_Sort_odd_even(int n, double *a, int root, MPI_Comm comm) {
     }
   }
   MPI_Gather(locala, n / size, MPI_DOUBLE, a, n / size, MPI_DOUBLE, root, comm);
-
+  free(locala);
   return MPI_SUCCESS;
 }
 
@@ -361,6 +367,14 @@ int MPI_Sort_all_to_all_bucket(int n, double *a, double max, int root,
 
   MPI_Gatherv(bucket, bucketN, MPI_DOUBLE, a, count, displs, MPI_DOUBLE, root,
               comm);
-
+  free(sendcount);
+  free(displs);
+  free(localArray);
+  free(bucketCounts);
+  free(bucketSendDispls);
+  free(bucketRecvs);
+  free(recvDispls);
+  free(bucket);
+  free(count);
   return MPI_SUCCESS;
 }
